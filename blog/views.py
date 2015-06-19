@@ -54,11 +54,12 @@ def setup():
             error = "Error creating user"
         if user.id and blog.id:
             db.session.commit()
+	    flash('Blog created')
+	    return redirect(url_for('index'))
         else:
             db.session.rollback()
             error = "Error creating blog"
-        flash('Blog created')
-        return redirect('/admin')
+
     return render_template('blog/setup.html', form=form)
 
 @app.route('/post', methods=('GET', 'POST'))
@@ -129,5 +130,6 @@ def delete(post_id):
 
 @app.route('/article/<slug>')
 def article(slug):
+    blog = Blog.query.first()
     post = Post.query.filter_by(slug=slug).first_or_404()
-    return render_template('blog/article.html', post=post)
+    return render_template('blog/article.html', blog=blog, post=post)

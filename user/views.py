@@ -1,5 +1,5 @@
-from flask_blog import app
-from flask import render_template, redirect, session, request, url_for
+from flask_blog import app, db
+from flask import render_template, redirect, session, request, url_for, flash
 from user.form import RegisterForm, LoginForm
 from user.models import User
 from user.decorators import login_required
@@ -26,31 +26,39 @@ def login():
                     session.pop('next')
                     return redirect(next)
                 else:
+		    flash("User %s logged in" % (user.username))
                     return redirect(url_for('index'))
             else:
                 error = "Incorrect password"
         else:
-            error = "User not found"
+            error = "Incorrect username"
     return render_template('user/login.html', form=form, error=error)
 
 @app.route('/register', methods=('GET', 'POST'))
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        return redirect('/success')
+	salt = bcrypt.gensalt()
+	hashed_password = bcrypt.hashpw(form.password.data, salt)
+	user = User(
+		form.fullname.data,
+		form.email.data,
+		form.username.data,
+		hashed_password,
+		False
+	)
+	db.session.add(user)
+	db.session.commit()
+	return redirect('/success')
     return render_template('user/register.html', form=form)
 
 @app.route('/logout')
 def logout():
     session.pop('username')
     session.pop('is_author')
+    flash("User logged out")
     return redirect(url_for('index'))
 
 @app.route('/success')
 def success():
     return "Author registered!"
-
-@app.route('/login_success')
-@login_required
-def login_success():
-    return "Author logged in!"
