@@ -1,9 +1,9 @@
 from flask_blog import app
 from flask import render_template, redirect, flash, url_for, session, request
-from blog.form import SetupForm, PostForm
+from blog.form import SetupForm, PostForm, CommentForm
 from flask_blog import db, uploaded_images
 from user.models import User
-from blog.models import Blog, Post, Category
+from blog.models import Blog, Post, Category, Comment
 from user.decorators import login_required, author_required
 import bcrypt
 from slugify import slugify
@@ -128,8 +128,21 @@ def delete(post_id):
     flash("Article deleted")
     return redirect('/admin')
 
-@app.route('/article/<slug>')
+@app.route('/article/<slug>', methods=('GET', 'POST'))
 def article(slug):
+    form = CommentForm()
     blog = Blog.query.first()
     post = Post.query.filter_by(slug=slug).first_or_404()
-    return render_template('blog/article.html', blog=blog, post=post)
+    comments = Comment.query.filter_by(post_id=post.id).all()
+    if form.validate_on_submit():
+	if session['username']:
+	    user = User.query.filter_by(username=session['username']).first()
+	    comment = Comment(
+			post.id,
+			user,
+			form.content.data
+		    )
+	    db.session.add(comment)
+	    db.session.commit()
+        return redirect(url_for('article', slug=slug))
+    return render_template('blog/article.html', slug=slug, blog=blog, post=post, form=form, comments=comments)

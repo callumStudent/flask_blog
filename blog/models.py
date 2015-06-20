@@ -59,3 +59,27 @@ class Category(db.Model):
 
     def __repr__(self):
         return self.name
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    author = db.relationship('User',
+        backref=db.backref('user', lazy='dynamic'))
+    
+    time = db.Column(db.DateTime)
+    content = db.Column(db.Text)
+
+    def __init__(self, article_id, author, content, time=None):
+	self.post_id = article_id
+	self.user_id = author.id
+	self.author = author
+	self.content = content
+	if time is None:
+	    self.time = datetime.utcnow()
+
+    def __repr__(self):
+	return "<User: %d  Comment: %s >" % (self.user_id, self.content)
+

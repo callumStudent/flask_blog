@@ -61,6 +61,18 @@ class UserTest(unittest.TestCase):
 		confirm=confirm
 	    ), follow_redirects=True)
 
+    def post_to_blog(self, title, body, new_category, image=None, category=None):
+	return self.app.post('/post', data=dict(
+		    image=image,
+		    title=title,
+		    body=body,
+		    category=category,
+		    new_category=new_category
+		), follow_redirects=True)
+
+    def comment_on_article(self, slug, content):
+	return self.app.post('/article/'+slug, data=dict(content=content))
+
     def test_create_blog(self):
 	rv = self.create_blog()
 	assert 'Blog created' in rv.data
@@ -94,6 +106,25 @@ class UserTest(unittest.TestCase):
 	assert "User john logged in" in rv.data
 	rv = self.app.get('/admin', follow_redirects=True)
 	assert "403 Forbidden" in rv.data
+
+    def test_post(self):
+	self.create_blog()
+	rv = self.login('tester1', 'test')
+	rv = self.post_to_blog('Test Post', 'body', 'test')
+	assert "Test Post" in rv.data
+
+    def test_comment(self):
+	self.create_blog()
+	rv = self.login('tester1', 'test')
+	rv = self.post_to_blog('Test Post', 'body', 'test')
+	rv = self.app.get('/article/Test-Post')
+	assert "Write a comment" in rv.data
+	rv = self.comment_on_article('Test-Post', 'this is a test comment')
+	rv = self.app.get('/article/Test-Post')
+	assert 'this is a test comment</p>' in rv.data
+	rv = self.logout()
+	rv = self.app.get('/article/Test-Post')
+	assert "Log in</a> to post a comment" in rv.data
 
     
 if __name__ == "__main__":
